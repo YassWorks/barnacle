@@ -1,3 +1,5 @@
+use is_executable::IsExecutable;
+
 #[allow(unused_imports)]
 use std::env;
 use std::io::{self, Write};
@@ -13,7 +15,7 @@ fn check_type(args: &str) -> String {
 
     for dir in env::split_paths(&path) {
         let full_path = dir.join(args);
-        if full_path.exists() {
+        if full_path.exists() && full_path.is_executable() {
             return format!("{args} is {}", full_path.display());
         }
     }
