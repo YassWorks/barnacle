@@ -7,14 +7,23 @@ fn main() {
         io::stdout().flush().unwrap();
     
         let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
+        let n = io::stdin().read_line(&mut input).unwrap();
+        if n == 0 {
+            break;
+        }
     
         let input = input.trim();
         
-        if input == "exit" {
-            break;
-        }
-        
-        println!("{}: command not found", input);
+        let (cmd, args) = match input.split_once(' ') {
+            Some((c, a)) => (c, a),
+            None => (input, ""),
+        };
+
+        match cmd {
+            "exit" => break,
+            "" => continue,
+            "echo" => println!("{}", args),
+            _ => println!("{}: command not found", input),
+        };
     }
 }
