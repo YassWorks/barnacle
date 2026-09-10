@@ -1,14 +1,24 @@
 #[allow(unused_imports)]
+use std::env;
 use std::io::{self, Write};
 
 const BUILTINS: [&str; 3] = ["echo", "exit", "type"];
 
 fn check_type(args: &str) -> String {
+    let path = env::var("PATH").unwrap();
+
     if BUILTINS.contains(&args) {
-        format!("{args} is a shell builtin")
-    } else {
-        format!("{args}: not found")
+        return format!("{args} is a shell builtin");
     }
+
+    for dir in env::split_paths(&path) {
+        let full_path = dir.join(args);
+        if full_path.exists() {
+            return format!("{args} is {}", full_path.display());
+        }
+    }
+
+    format!("{args}: not found")
 }
 
 fn main() {
