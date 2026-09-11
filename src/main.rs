@@ -47,6 +47,14 @@ fn run_exec_if_possible(cmd: &str, args: &str) -> bool {
     return true;
 }
 
+fn get_absolute_path(path: &str) -> String {
+    let expanded = match (path.strip_prefix('~'), env::home_dir()) {
+        (Some(r), Some(h)) => format!("{}{r}", h.display()),
+        _ => path.to_string(),
+    };
+    return expanded;
+}
+
 fn main() {
     loop {
         print!("$ ");
@@ -76,7 +84,8 @@ fn main() {
         } else if cmd == "pwd" {    
             println!("{}", env::current_dir().unwrap().display());
         } else if cmd == "cd" {
-            if let Err(_) = env::set_current_dir(args) {
+            let absolute_path = get_absolute_path(args);
+            if let Err(_) = env::set_current_dir(absolute_path) {
                 println!("{cmd}: {args}: No such file or directory")
             }
         } else if run_exec_if_possible(cmd, args) {
