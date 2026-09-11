@@ -1,26 +1,50 @@
-use is_executable::IsExecutable;
-
 #[allow(unused_imports)]
 use std::env;
 use std::io::{self, Write};
+use std::path::PathBuf;
+use std::process::Command;
+
+use is_executable::IsExecutable;
 
 const BUILTINS: [&str; 3] = ["echo", "exit", "type"];
 
-fn check_type(args: &str) -> String {
+fn find_in_path(cmd: &str) -> Option<PathBuf> {
     let path = env::var("PATH").unwrap();
+    for dir in env::split_paths(&path) {
+        let full_path = dir.join(cmd);
+        if full_path.exists() && full_path.is_executable() {
+            return Some(full_path);
+        }
+    }
+    None
+}
 
+fn check_type(args: &str) -> String {
     if BUILTINS.contains(&args) {
         return format!("{args} is a shell builtin");
     }
 
-    for dir in env::split_paths(&path) {
-        let full_path = dir.join(args);
-        if full_path.exists() && full_path.is_executable() {
-            return format!("{args} is {}", full_path.display());
-        }
+    match find_in_path(args) {
+        Some(full_path) => format!("{args} is {}", full_path.display()),
+        None => format!("{args}: not found"),
+    }
+}
+
+fn is_runnable(cmd: &str) -> bool {
+    return find_in_path(cmd) != None;
+}
+
+fn run_exec_if_possible(cmd: &str, args: &str) -> bool {
+    if !is_runnable(cmd) {
+        return false;
     }
 
-    format!("{args}: not found")
+    Command::new(cmd)
+        .args(args.split_whitespace())
+        .status()
+        .unwrap();
+
+    return true;
 }
 
 fn main() {
@@ -41,12 +65,18 @@ fn main() {
             None => (input, ""),
         };
 
-        match cmd {
-            "exit" => break,
-            "" => continue,
-            "echo" => println!("{}", args),
-            "type" => println!("{}", check_type(args)),
-            _ => println!("{}: command not found", input),
-        };
+        if cmd == "" {
+            continue;
+        } else if cmd == "exit" {
+            break;
+        } else if cmd == "echo" {
+            println!("{}", args);
+        } else if cmd == "type" {
+            println!("{}", check_type(args));
+        } else if run_exec_if_possible(cmd, args) {
+            continue;
+        } else {
+            println!("{}: command not found", cmd);
+        }
     }
 }
