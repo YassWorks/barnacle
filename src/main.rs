@@ -6,7 +6,7 @@ use std::process::Command;
 
 use is_executable::IsExecutable;
 
-const BUILTINS: [&str; 3] = ["echo", "exit", "type"];
+const BUILTINS: [&str; 4] = ["echo", "exit", "type", "pwd"];
 
 fn find_in_path(cmd: &str) -> Option<PathBuf> {
     let path = env::var("PATH").unwrap();
