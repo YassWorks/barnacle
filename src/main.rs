@@ -6,7 +6,7 @@ use std::process::Command;
 
 use is_executable::IsExecutable;
 
-const BUILTINS: [&str; 4] = ["echo", "exit", "type", "pwd"];
+const BUILTINS: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
 
 fn find_in_path(cmd: &str) -> Option<PathBuf> {
     let path = env::var("PATH").unwrap();
@@ -75,6 +75,10 @@ fn main() {
             println!("{}", check_type(args));
         } else if cmd == "pwd" {    
             println!("{}", env::current_dir().unwrap().display());
+        } else if cmd == "cd" {
+            if let Err(_) = env::set_current_dir(args) {
+                println!("{cmd}: {args}: No such file or directory")
+            }
         } else if run_exec_if_possible(cmd, args) {
             continue;
         } else {
