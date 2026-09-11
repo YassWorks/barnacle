@@ -73,6 +73,8 @@ fn main() {
             println!("{}", args);
         } else if cmd == "type" {
             println!("{}", check_type(args));
+        } else if cmd == "pwd" {    
+            println!("{}", env::current_dir().unwrap().display());
         } else if run_exec_if_possible(cmd, args) {
             continue;
         } else {
