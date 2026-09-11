@@ -31,7 +31,7 @@ fn check_type(args: &str) -> String {
 }
 
 fn is_runnable(cmd: &str) -> bool {
-    return find_in_path(cmd) != None;
+    find_in_path(cmd).is_some()
 }
 
 fn run_exec_if_possible(cmd: &str, args: &str) -> bool {
@@ -44,7 +44,7 @@ fn run_exec_if_possible(cmd: &str, args: &str) -> bool {
         .status()
         .unwrap();
 
-    return true;
+    true
 }
 
 fn get_absolute_path(path: &str) -> String {
@@ -73,7 +73,7 @@ fn main() {
             None => (input, ""),
         };
 
-        if cmd == "" {
+        if cmd.is_empty() {
             continue;
         } else if cmd == "exit" {
             break;
