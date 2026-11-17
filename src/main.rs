@@ -1,58 +1,15 @@
-#[allow(unused_imports)]
-use std::env;
+use codecrafters_shell::builtin::{Builtin, Flow};
+use codecrafters_shell::error::ShellError;
+use codecrafters_shell::parser::{CommandLine, parse};
+use codecrafters_shell::path::find_in_path;
+
 use std::io::{self, Write};
-use std::path::PathBuf;
 use std::process::Command;
 
-use is_executable::IsExecutable;
-
-const BUILTINS: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
-
-fn find_in_path(cmd: &str) -> Option<PathBuf> {
-    let path = env::var("PATH").unwrap();
-    for dir in env::split_paths(&path) {
-        let full_path = dir.join(cmd);
-        if full_path.exists() && full_path.is_executable() {
-            return Some(full_path);
-        }
-    }
-    None
-}
-
-fn check_type(args: &str) -> String {
-    if BUILTINS.contains(&args) {
-        return format!("{args} is a shell builtin");
-    }
-
-    match find_in_path(args) {
-        Some(full_path) => format!("{args} is {}", full_path.display()),
-        None => format!("{args}: not found"),
-    }
-}
-
-fn is_runnable(cmd: &str) -> bool {
-    find_in_path(cmd).is_some()
-}
-
-fn run_exec_if_possible(cmd: &str, args: &str) -> bool {
-    if !is_runnable(cmd) {
-        return false;
-    }
-
-    Command::new(cmd)
-        .args(args.split_whitespace())
-        .status()
-        .unwrap();
-
-    true
-}
-
-fn get_absolute_path(path: &str) -> String {
-    let expanded = match (path.strip_prefix('~'), env::home_dir()) {
-        (Some(r), Some(h)) => format!("{}{r}", h.display()),
-        _ => path.to_string(),
-    };
-    return expanded;
+fn run_external(cmd: &str, args: &[String]) -> Result<(), ShellError> {
+    find_in_path(cmd).ok_or_else(|| ShellError::NotFound(cmd.to_string()))?;
+    Command::new(cmd).args(args).status()?;
+    Ok(())
 }
 
 fn main() {
@@ -66,32 +23,20 @@ fn main() {
             break;
         }
 
-        let input = input.trim();
+        let Some(line) = parse(&input) else { continue };
+        let CommandLine { cmd, args } = line;
 
-        let (cmd, args) = match input.split_once(' ') {
-            Some((c, a)) => (c, a),
-            None => (input, ""),
-        };
-
-        if cmd.is_empty() {
-            continue;
-        } else if cmd == "exit" {
-            break;
-        } else if cmd == "echo" {
-            println!("{}", args);
-        } else if cmd == "type" {
-            println!("{}", check_type(args));
-        } else if cmd == "pwd" {    
-            println!("{}", env::current_dir().unwrap().display());
-        } else if cmd == "cd" {
-            let absolute_path = get_absolute_path(args);
-            if let Err(_) = env::set_current_dir(absolute_path) {
-                println!("{cmd}: {args}: No such file or directory")
+        match cmd.parse::<Builtin>() {
+            Ok(builtin_cmd) => match builtin_cmd.run(&args) {
+                Ok(Flow::Continue) => {}
+                Ok(Flow::Exit(code)) => std::process::exit(code),
+                Err(e) => eprintln!("{e}"),
+            },
+            Err(_) => {
+                if let Err(e) = run_external(&cmd, &args) {
+                    eprintln!("{e}");
+                }
             }
-        } else if run_exec_if_possible(cmd, args) {
-            continue;
-        } else {
-            println!("{}: command not found", cmd);
         }
     }
 }
